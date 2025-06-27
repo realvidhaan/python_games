@@ -18,6 +18,22 @@ colors = {
     'cyan': (0, 255, 255),
     'orange': (255, 165, 0),
 }
+color = {
+    ((1, 1, 1, 1),): (238, 130, 238),  
+    ((0, 1, 0),
+     (1, 1, 1)): (0, 0, 255),         
+    ((1, 1),
+     (1, 0),
+     (1, 0)): (0, 255, 0),            
+    ((1, 1),
+     (1, 1)): (255, 0, 0),            
+    ((0, 1, 1),
+     (1, 1, 0)): (255, 255, 0),       
+    ((1, 0, 0),
+     (1, 1, 1)): (0, 255, 255),       
+    ((0, 0, 1),
+     (1, 1, 1)): (255, 165, 0)        
+}
 offset= 0
 grid=[[None for _ in range(GRID_WIDTH)] for _ in range(GRID_HEIGHT)]
 frame_count = 0
@@ -38,8 +54,10 @@ tetrominoes = {
                [1, 1, 1]],
 }
 start=randint(0, GRID_WIDTH-10) * CELL_SIZE
-blocks_on_screen = [{'shape': choice(list(tetrominoes.values())), 'offset': offset, 'start': start}]
+s=choice(list(tetrominoes.keys()))
+blocks_on_screen = [{'shape': s, 'offset': offset, 'start': start, 'color': color[tuple(tuple(row) for row in tetrominoes[s])]}]
 curr_block=curr_block = blocks_on_screen[-1]
+curr_block['offset']+=1
 music.set_volume(0.2)
 music.play('background_music')
 def draw():
@@ -55,36 +73,38 @@ def draw():
         for row in range(len(curr_block['shape'])):
             for i in range(len(curr_block['shape'][row])):
                 if curr_block['shape'][row][i]==1:
-                    screen.draw.filled_rect(Rect(curr_block['start']+i*CELL_SIZE, (curr_block['offset']+row)*CELL_SIZE, CELL_SIZE, CELL_SIZE), next(k for k, v in tetrominoes.items() if v == curr_block['shape']))
+                    screen.draw.filled_rect(Rect(curr_block['start']+i*CELL_SIZE, (curr_block['offset']+row)*CELL_SIZE, CELL_SIZE, CELL_SIZE), curr_block['color'])
         for col in range(GRID_WIDTH):
             for row in range(GRID_HEIGHT):
                 screen.draw.rect(Rect(col*CELL_SIZE, row*CELL_SIZE, CELL_SIZE, CELL_SIZE), (35, 35, 35))
         screen.draw.text(f"Score: {score}", topleft=(10, 10), fontsize=50, color='white')
 def update():
     global game_over, blocks_on_screen, curr_block, start, score, offset, frame_count, CELL_SIZE, grid
+    if frame_count==0:
+        curr_block['offset']+=10
     frame_count += 1
-    if frame_count%15==0:
+    if frame_count%25==0:
         if curr_block['offset'] >= GRID_HEIGHT - len(curr_block['shape']) or check_collision(curr_block, curr_block['offset']+1, curr_block['start']):
             for row in range(len(curr_block['shape'])):
                 for col in range(len(curr_block['shape'][row])):
                     if curr_block['shape'][row][col] ==1:
                         try:
-                            grid[curr_block['offset']+row][(curr_block['start']//CELL_SIZE)+col] = colors[next(k for k, v in tetrominoes.items() if v == curr_block['shape'])]
+                            grid[curr_block['offset']+row][(curr_block['start']//CELL_SIZE)+col] = curr_block['color']
                         except:
                             pass
-                        grid[curr_block['offset']+row][(curr_block['start']//CELL_SIZE)+col] = colors[next(k for k, v in tetrominoes.items() if v == curr_block['shape'])]
             if any(grid[0][col] is not None for col in range(GRID_WIDTH)):
                 game_over = True
                 return
             new_shape = choice(list(tetrominoes.values()))
+            shape_key = tuple(tuple(row) for row in new_shape)
             max_start = GRID_WIDTH - len(new_shape[0])
             start = randint(0, max_start) * CELL_SIZE
-            blocks_on_screen.append({'shape': new_shape, 'offset': offset, 'start': start})
-            curr_block = blocks_on_screen[-1]
-            curr_block['offset'] = offset
-            if check_collision(curr_block, curr_block['offset'], curr_block['start']):
+            new_block = {'shape': new_shape, 'offset': 0, 'start': start, 'color': color[shape_key]}
+            if check_collision(new_block, new_block['offset'], new_block['start']):
                 game_over = True
                 return
+            blocks_on_screen.append(new_block)
+            curr_block = new_block
         else:
             curr_block['offset'] += 1
     curr_block['offset'] = min(curr_block['offset'], GRID_HEIGHT - len(curr_block['shape']))
@@ -100,9 +120,10 @@ def on_key_down(key):
         offset = 0
         grid=[[None for _ in range(GRID_WIDTH)] for _ in range(GRID_HEIGHT)]
         new_shape = choice(list(tetrominoes.values()))
+        shape_key = tuple(tuple(row) for row in new_shape)
+        blocks_on_screen.append({'shape': new_shape, 'offset': offset, 'start': start, 'color': color[shape_key]})
         max_start = GRID_WIDTH - len(new_shape[0])
         start = randint(0, max_start) * CELL_SIZE
-        blocks_on_screen=[{'shape': new_shape, 'offset': offset, 'start': start}]
         curr_block = blocks_on_screen[-1]
         music.play('background_music')
     else:
@@ -112,6 +133,13 @@ def on_key_down(key):
                 new_start += CELL_SIZE
             elif key==keys.LEFT:
                 new_start -= CELL_SIZE
+            elif key==keys.UP:
+                shape = [list(row)[::-1] for row in zip(*curr_block['shape'])]
+                if not check_collision({'shape': shape}, curr_block['offset'], curr_block['start']):
+                    curr_block['shape'] = shape
+            elif key==keys.DOWN:
+                if not check_collision(curr_block, curr_block['offset'] + 2, curr_block['start']):
+                    curr_block['offset'] += 2
             new_start = max(0, min(new_start, (GRID_WIDTH - len(curr_block['shape'][0])) * CELL_SIZE))
             if not check_collision(curr_block, curr_block['offset'], new_start):
                 curr_block['start'] = new_start
@@ -144,3 +172,4 @@ def clear_full_rows():
         new_grid.insert(0, [None for _ in range(GRID_WIDTH)])
     grid=new_grid
 clock.schedule_interval(clear_full_rows, 0.2)
+update()
