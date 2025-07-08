@@ -2,6 +2,8 @@ import pgzero
 import csv
 import pyganim
 import pygame
+import os
+import sys
 WIDTH=800
 isjump=False
 draw_blob=True
@@ -171,6 +173,15 @@ def update():
         else:
             fading=False
             opaqueness=0
+    foot_left  = collide(user.x - user.width // 4, next_y + user.height // 2)
+    foot_right = collide(user.x + user.width // 4, next_y + user.height // 2)
+    if foot_left not in [None, 'spike', 'upsidedown_spike', 'sideways_spike', 'ladder'] or foot_right not in [None, 'spike', 'upsidedown_spike', 'sideways_spike', 'ladder']:
+        isjump = False
+        velocity = 0
+        tile_y = int((next_y + user.height // 2) // TILE_SIZE)
+        user.y = tile_y * TILE_SIZE - user.height // 2  
+    if user.colliderect(trophy):
+        os.execlp("pgzrun", "pgzrun", "platformer2.py")
 def show_coin():
     global draw_coin
     draw_coin=True

@@ -2,6 +2,8 @@ import pgzero
 import csv
 import pyganim
 import pygame
+import os
+import sys
 WIDTH=800
 isjump=False
 spe=3.5
@@ -113,10 +115,10 @@ def collide(x, y):
 def update():
     global isjump, velocity, gravity, camera_x, camera_y, spe, can_jump, can_bounce, health, exploding, resetting, exploding_pos, speed, draw_blob, draw_coin, score, can_bounce, show_text, draw_trophy, fading, opaqueness, fading, health, draw_blob, draw_coin, draw_trophy, sign, coins_anim, blob, anim, text_anim, trophy, draw_blob, draw_coin, draw_trophy, sign, coins_anim, blob, anim, text_anim, trophy, platform, gliding, show_umbrella
     if keyboard.LEFT or keyboard.RIGHT:
-        if keyboard.LEFT and collide(user.x-25, user.y) in [None, 'spike', 'upsidedown_spike', 'sideways_spike']:
+        if keyboard.LEFT and collide(user.x-25, user.y) in [None, 'spike', 'upsidedown_spike', 'sideways_spike', 'ladder']:
             user.image='user_running_left'
             user.x-=5
-        elif keyboard.RIGHT and collide(user.x+25, user.y) in [None, 'spike', 'upsidedown_spike', 'sideways_spike']:
+        elif keyboard.RIGHT and collide(user.x+25, user.y) in [None, 'spike', 'upsidedown_spike', 'sideways_spike', 'ladder']:
             user.image='user_running' 
             user.x+=5
     else:
@@ -125,13 +127,20 @@ def update():
         user.image='user_jumping'
     velocity += gravity
     next_y = user.y + velocity
-    if velocity < 0 and collide(user.x, next_y - user.height // 2) not in [None, 'spike', 'upsidedown_spike', 'sideways_spike']:
+    if velocity < 0 and collide(user.x, next_y - user.height // 2) not in [None, 'spike', 'upsidedown_spike', 'sideways_spike', 'ladder']:
         velocity = 0
         tile_y = int((next_y - user.height // 2) // TILE_SIZE)
         user.y = (tile_y + 1) * TILE_SIZE + user.height // 2
     else:
         user.y = next_y
-    if collide(user.x, next_y + user.height // 2) not in [None, 'spike', 'upsidedown_spike', 'sideways_spike']:
+    foot_left  = collide(user.x - user.width // 4, next_y + user.height // 2)
+    foot_right = collide(user.x + user.width // 4, next_y + user.height // 2)
+    if foot_left not in [None, 'spike', 'upsidedown_spike', 'sideways_spike', 'ladder'] or foot_right not in [None, 'spike', 'upsidedown_spike', 'sideways_spike', 'ladder']:
+        isjump = False
+        velocity = 0
+        tile_y = int((next_y + user.height // 2) // TILE_SIZE)
+        user.y = tile_y * TILE_SIZE - user.height // 2  
+    if collide(user.x, next_y + user.height // 2) not in [None, 'spike', 'upsidedown_spike', 'sideways_spike', 'ladder']:
         isjump = False
         velocity = 0
         tile_y = int((next_y+user.height//2 + user.height // 2) // TILE_SIZE)
@@ -189,6 +198,14 @@ def update():
         show_umbrella=False
         umbrella.pos=(-1000, -1000)
         gliding=True
+    if gliding and keyboard.SPACE and velocity>0:
+        user.image='user_gliding'
+        gravity=0.1
+    else:
+        gravity=1.5
+    if collide(user.x, user.y+user.height//2)=='ladder' and keyboard.UP:
+        user.y-=50
+        gravity=0
 def show_coin():
     global draw_coin
     draw_coin=True
@@ -203,10 +220,6 @@ def on_key_down(key):
         isjump=True
         can_jump=False
         clock.schedule(stop_can_jump, 0.5)
-    if gliding and key==keys.SPACE:
-        gravity=0.1
-    elif gliding and key!=keys.SPACE:
-        gravity=1.5
 def stop_can_jump():
     global can_jump
     can_jump=True
