@@ -4,8 +4,11 @@ import pyganim
 import pygame
 import os
 import sys
+spike_monster=Actor('spike_monster', (1677, 105.5))
 WIDTH=800
 isjump=False
+was_on_ladder=False
+counter=0
 spe=3.5
 gliding=False
 show_umbrella=True
@@ -107,13 +110,14 @@ def draw():
     screen.blit(platform.image, (platform.x-camera_x, platform.y-camera_y))
     if show_umbrella:
         screen.blit(umbrella.image, (umbrella.x-camera_x, umbrella.y-camera_y))
+    screen.blit(spike_monster.image, (spike_monster.x-camera_x, spike_monster.y-camera_y))
 def collide(x, y):
     try:
         return blocks.get(map[int(y/TILE_SIZE)][int(x/TILE_SIZE)])
     except:
         return None
 def update():
-    global isjump, velocity, gravity, camera_x, camera_y, spe, can_jump, can_bounce, health, exploding, resetting, exploding_pos, speed, draw_blob, draw_coin, score, can_bounce, show_text, draw_trophy, fading, opaqueness, fading, health, draw_blob, draw_coin, draw_trophy, sign, coins_anim, blob, anim, text_anim, trophy, draw_blob, draw_coin, draw_trophy, sign, coins_anim, blob, anim, text_anim, trophy, platform, gliding, show_umbrella
+    global isjump, velocity, gravity, counter, was_on_ladder,camera_x, camera_y, spe, can_jump, can_bounce, health, exploding, resetting, exploding_pos, speed, draw_blob, draw_coin, score, can_bounce, show_text, draw_trophy, fading, opaqueness, fading, health, draw_blob, draw_coin, draw_trophy, sign, coins_anim, blob, anim, text_anim, trophy, draw_blob, draw_coin, draw_trophy, sign, coins_anim, blob, anim, text_anim, trophy, platform, gliding, show_umbrella
     if keyboard.LEFT or keyboard.RIGHT:
         if keyboard.LEFT and collide(user.x-25, user.y) in [None, 'spike', 'upsidedown_spike', 'sideways_spike', 'ladder']:
             user.image='user_running_left'
@@ -127,30 +131,42 @@ def update():
         user.image='user_jumping'
     velocity += gravity
     next_y = user.y + velocity
-    if velocity < 0 and collide(user.x, next_y - user.height // 2) not in [None, 'spike', 'upsidedown_spike', 'sideways_spike', 'ladder']:
-        velocity = 0
-        tile_y = int((next_y - user.height // 2) // TILE_SIZE)
-        user.y = (tile_y + 1) * TILE_SIZE + user.height // 2
-    else:
-        user.y = next_y
-    foot_left  = collide(user.x - user.width // 4, next_y + user.height // 2)
-    foot_right = collide(user.x + user.width // 4, next_y + user.height // 2)
-    if foot_left not in [None, 'spike', 'upsidedown_spike', 'sideways_spike', 'ladder'] or foot_right not in [None, 'spike', 'upsidedown_spike', 'sideways_spike', 'ladder']:
-        isjump = False
-        velocity = 0
-        tile_y = int((next_y + user.height // 2) // TILE_SIZE)
-        user.y = tile_y * TILE_SIZE - user.height // 2  
-    if collide(user.x, next_y + user.height // 2) not in [None, 'spike', 'upsidedown_spike', 'sideways_spike', 'ladder']:
-        isjump = False
-        velocity = 0
-        tile_y = int((next_y+user.height//2 + user.height // 2) // TILE_SIZE)
-        user.y = tile_y * TILE_SIZE - user.height // 2
-    elif collide(user.x, next_y+user.height//2) in ['spike', 'upsidedown_spike', 'sideways_spike']:
-        sounds.damage.play(maxtime=1000)
-        user.y=next_y
-        health-=5
-    else:
-        user.y = next_y
+    if velocity < 0:
+        if collide(user.x, user.y + user.height // 2) == 'ladder' and keyboard.UP:
+            user.y = next_y
+        elif collide(user.x, next_y - user.height // 2) not in [None, 'spike', 'upsidedown_spike', 'sideways_spike', 'ladder']:
+            velocity = 0
+            tile_y = int((next_y - user.height // 2) // TILE_SIZE)
+            user.y = (tile_y + 1) * TILE_SIZE + user.height // 2
+        else:
+            user.y = next_y
+    elif velocity>=0:
+        if collide(user.x, user.y + user.height // 2) == 'ladder' and keyboard.UP:
+            user.y = next_y
+        elif user.bottom + velocity >= platform.top and user.top < platform.top and user.right > platform.left+70 and user.left < platform.right+30 and velocity > 0:
+            user.bottom = platform.top+20
+            velocity = 0
+            isjump = False
+            can_jump = True
+        else:
+            foot_left  = collide(user.x - user.width // 4, next_y + user.height // 2)
+            foot_right = collide(user.x + user.width // 4, next_y + user.height // 2)
+            if foot_left not in [None, 'spike', 'upsidedown_spike', 'sideways_spike', 'ladder'] or foot_right not in [None, 'spike', 'upsidedown_spike', 'sideways_spike', 'ladder']:
+                isjump = False
+                velocity = 0
+                tile_y = int((next_y + user.height // 2) // TILE_SIZE)
+                user.y = tile_y * TILE_SIZE - user.height // 2  
+            if collide(user.x, next_y + user.height // 2) not in [None, 'spike', 'upsidedown_spike', 'sideways_spike', 'ladder']:
+                isjump = False
+                velocity = 0
+                tile_y = int((next_y+user.height//2 + user.height // 2) // TILE_SIZE)
+                user.y = tile_y * TILE_SIZE - user.height // 2
+            elif collide(user.x, next_y+user.height//2) in ['spike', 'upsidedown_spike', 'sideways_spike']:
+                sounds.damage.play(maxtime=1000)
+                user.y=next_y
+                health-=5
+            else:
+                user.y = next_y
     camera_x = max(0, min(int(user.x - WIDTH // 2), len(map[0]) * TILE_SIZE - WIDTH))
     camera_y = max(0, min(int(user.y - HEIGHT // 2), len(map) * TILE_SIZE - HEIGHT))
     blob.x+=speed
@@ -203,9 +219,17 @@ def update():
         gravity=0.1
     else:
         gravity=1.5
+    if (collide(user.x, user.y+user.height//2)=='ladder' and keyboard.UP) and was_on_ladder==False:
+        counter=0
+        was_on_ladder=True
+    elif (collide(user.x, user.y+user.height//2)=='ladder' and keyboard.UP) and was_on_ladder:
+        was_on_ladder=False
     if collide(user.x, user.y+user.height//2)=='ladder' and keyboard.UP:
-        user.y-=50
-        gravity=0
+        user.y-=7
+        velocity=0
+    if user.y<223 and user.x>1615 and velocity==0 and counter<=1:
+        user.y-=20
+        counter+=1
 def show_coin():
     global draw_coin
     draw_coin=True
@@ -232,7 +256,7 @@ def on_mouse_down(pos):
     world_y = pos[1] + camera_y
     print("World coordinates:", world_x, world_y)
 def reset():
-    global camera_x, camera_y, health, draw_blob, draw_coin, exploding, exploding_pos, score, draw_trophy, fading, opaqueness, isjump, can_jump, text, text_anim, anim, sign, gravity, can_bounce, speed, blob, coins, coins_anim, show_text, user, velocity, resetting, gliding, show_umbrella
+    global camera_x, camera_y, health, counter, draw_blob, draw_coin, exploding, exploding_pos, score, draw_trophy, fading, opaqueness, isjump, can_jump, text, was_on_ladder, text_anim, anim, sign, gravity, can_bounce, speed, blob, coins, coins_anim, show_text, user, velocity, resetting, gliding, show_umbrella
     opaqueness=0
     show_umbrella=True
     isjump=False
@@ -242,6 +266,8 @@ def reset():
     resetting=True
     umbrella.pos=(1315, 97)
     gliding=False
+    counter=0
+    was_on_ladder=False
     exploding=False
     draw_coin=False
     text = [('black_text.png', 300), ('blue_text.png', 300)]
