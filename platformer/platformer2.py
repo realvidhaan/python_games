@@ -6,8 +6,10 @@ import os
 import sys
 spike_monster=Actor('spike_monster', (1677, 105.5))
 WIDTH=800
+sped=2
 isjump=False
 was_on_ladder=False
+draw_spike_monster=True
 counter=0
 spe=3.5
 gliding=False
@@ -77,7 +79,6 @@ def draw():
     screen.blit('background', (0, 0))
     draw_map(map)
     if exploding:
-        blob.pos=(-1000, -1000)
         anim.blit(screen.surface, (exploding_pos[0] - camera_x, exploding_pos[1] - camera_y))
     if draw_coin:
         coins_anim.blit(screen.surface, (1011 - camera_x, 229 - camera_y))
@@ -110,14 +111,15 @@ def draw():
     screen.blit(platform.image, (platform.x-camera_x, platform.y-camera_y))
     if show_umbrella:
         screen.blit(umbrella.image, (umbrella.x-camera_x, umbrella.y-camera_y))
-    screen.blit(spike_monster.image, (spike_monster.x-camera_x, spike_monster.y-camera_y))
+    if draw_spike_monster:
+        screen.blit(spike_monster.image, (spike_monster.x-camera_x, spike_monster.y-camera_y))
 def collide(x, y):
     try:
         return blocks.get(map[int(y/TILE_SIZE)][int(x/TILE_SIZE)])
     except:
         return None
 def update():
-    global isjump, velocity, gravity, counter, was_on_ladder,camera_x, camera_y, spe, can_jump, can_bounce, health, exploding, resetting, exploding_pos, speed, draw_blob, draw_coin, score, can_bounce, show_text, draw_trophy, fading, opaqueness, fading, health, draw_blob, draw_coin, draw_trophy, sign, coins_anim, blob, anim, text_anim, trophy, draw_blob, draw_coin, draw_trophy, sign, coins_anim, blob, anim, text_anim, trophy, platform, gliding, show_umbrella
+    global isjump, velocity, gravity, draw_spike_monster, counter, sped, was_on_ladder,camera_x, camera_y, spe, can_jump, can_bounce, health, exploding, resetting, exploding_pos, speed, draw_blob, draw_coin, score, can_bounce, show_text, draw_trophy, fading, opaqueness, fading, health, draw_blob, draw_coin, draw_trophy, sign, coins_anim, blob, anim, text_anim, trophy, draw_blob, draw_coin, draw_trophy, sign, coins_anim, blob, anim, text_anim, trophy, platform, gliding, show_umbrella
     if keyboard.LEFT or keyboard.RIGHT:
         if keyboard.LEFT and collide(user.x-25, user.y) in [None, 'spike', 'upsidedown_spike', 'sideways_spike', 'ladder']:
             user.image='user_running_left'
@@ -180,6 +182,7 @@ def update():
         exploding=True
         anim.play()
         clock.schedule(show_coin, 0.5)
+        blob.pos=(-1000, -1000)
     elif user.collidepoint(blob.pos):
         sounds.damage.play(maxtime=1000)
         health-=1
@@ -230,6 +233,29 @@ def update():
     if user.y<223 and user.x>1615 and velocity==0 and counter<=1:
         user.y-=20
         counter+=1
+    spike_monster.x+=sped
+    if spike_monster.x<=1620 or spike_monster.x>=1820:
+        sped*=-1
+    if top_touches_bottom(user, spike_monster):
+        sounds.explosion.play()
+        velocity=10
+        draw_spike_monster=False
+        exploding_pos=spike_monster.pos
+        exploding=True
+        anim.play()
+        clock.schedule(show_coin, 0.5)
+        spike_monster.pos=(-1000, -1000)
+    elif not top_touches_bottom(user, spike_monster) and user.collidepoint(spike_monster.pos):
+        sounds.damage.play(maxtime=1000)
+        health-=1   
+def top_touches_bottom(actor_top, actor_bottom):
+    vertical_touch = abs(actor_top.top - actor_bottom.bottom) < 5  
+    horizontal_overlap = (
+        actor_top.right > actor_bottom.left and
+        actor_top.left < actor_bottom.right
+    )
+    return vertical_touch and horizontal_overlap
+
 def show_coin():
     global draw_coin
     draw_coin=True
