@@ -163,7 +163,7 @@ def update():
         user.x = (len(map[0]) * TILE_SIZE - user.width // 2)-18
     if score==1:
         draw_trophy=True
-    if user.top>HEIGHT and not fading and not resetting:
+    if user.top>HEIGHT or health==0 and not fading and not resetting:
        fading=True
        resetting=True
        clock.schedule(reset, 1)
